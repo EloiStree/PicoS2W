@@ -2,7 +2,7 @@ Need: https://github.com/EloiStree/APIntCodeTournamentPythonRelay/blob/main/READ
 
 ------------
 
-# Code Tournament Hardware – Pico 2W
+# Pico S2W
 
 A Pico 2W setup for use in a code tournament.
 
