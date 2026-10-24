@@ -27,6 +27,7 @@ bool_use_debug_print = False
 
 import sys
 
+from Pico2W.int_delayer import IntTimeDelayer
 from int_to_media_player import IntS2WToMediaPlayer
 from int_to_midi import IntS2WToMidi
 from int_to_keyboard import IntS2WToKeyboard
@@ -119,6 +120,7 @@ int_media_player = IntS2WToMediaPlayer()
 int_keyboard = IntS2WToKeyboard()
 int_gamepad = IntS2WToGamepad()
 int_mouse = IntS2WToMouse()
+int_delayer = IntTimeDelayer()
 ntp_time_difference = GetNtpUtcTimestampTimeAndDifference()
 print("RTC ms:", ntp_time_difference.get_local_timestamp_in_milliseconds())
 print("NTP ms:", ntp_time_difference.get_ntp_utc_timestamp_in_milliseconds())
