@@ -12,6 +12,9 @@ from adafruit_hid import find_device
 import usb_hid
 import usb_hid
 
+from absolute_mouse.descriptor import device
+
+
 # IMPORTANT !!!!!!!!! IF YOU CHANGE YOU NEED A HARD RESET TO RECOGNIZE THE DEVICE
 # TURN OFF THE DEVICE THEN GO IN BOOT MODE THEN COME BACK TO NORMAL MODE
 # This is an updated example of a gamepad report descriptor with 32 buttons.
@@ -65,8 +68,10 @@ gamepad = usb_hid.Device(
 )
 usb_hid.enable(
     (usb_hid.Device.KEYBOARD,
-     usb_hid.Device.MOUSE,
+     #usb_hid.Device.MOUSE,
+     device,
      usb_hid.Device.CONSUMER_CONTROL,
-     gamepad)
+     gamepad )
 )
 usb_midi.enable()
+

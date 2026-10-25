@@ -12,7 +12,12 @@ DOC: https://github.com/EloiStree/S2W/blob/main/README.md
 
 
 ## DOC: https://docs.circuitpython.org/projects/hid/en/latest/api.html#adafruit-hid-mouse-mouse
+import os
+
 from adafruit_hid.mouse import Mouse
+import time
+import usb_hid
+from absolute_mouse import Mouse
 
 
 """ CHEAT SHEET
@@ -40,12 +45,14 @@ class IntegerActionToMouse:
   
     def __init__(self):
         self.mouse = Mouse(usb_hid.devices)
+        self.target_width_resolution = int(os.getenv("TARGET_SCREEN_RESOLUTION_WIDTH", 1920))
+        self.target_height_resolution = int(os.getenv("TARGET_SCREEN_RESOLUTION_HEIGHT", 1080))
 
 
     def int_to_mouse(self, value: int) :
        
         if value == 1260:
-           self.press_left_button
+           self.press_left_button()
         elif value == 2260:
             self.release_left_button()
         elif value == 1261:
@@ -109,19 +116,45 @@ class IntegerActionToMouse:
             self.move_to_border_left()
         elif value == 1279 :
             self.move_to_corner_top_left()
+        else:
+            ## What happening https://github.com/EloiStree/S2W look at Mouse
+            if value >= 1400000000 and value < 1600000000:
+                # ~pico|1425002500> in GOMI
+                # ~pico|1450005000> in GOMI
+                value_without_prefix = value % 100000000
+                x_left_right_percent = (value_without_prefix / 10000.0) / 10000.0
+                y_down_top_percent = (value_without_prefix % 10000.0) / 10000.0
+                x_left_right_32767 = int(x_left_right_percent * 32767.0)
+                y_down_top_32767 = int(y_down_top_percent * 32767.0)
+                print(f"x_left_right_percent: {x_left_right_percent}, y_down_top_percent: {y_down_top_percent}")
+
+                #Using mouse absolute as replacement of adafruit mouse
+                #self.mouse.move(x_left_right_32767, y_down_top_32767)
+
+                self.move_mouse_at_lrdt_percent_of(x_left_right_percent, y_down_top_percent)
 
 
+            elif value >= 1600000000 and value < 1700000000:
+                # Workd with adafruit. but the absolute mouse override it.
+                # I need to understand it better or make a cross on it.
+                # The adafruit is not good enought any way as it is not per pixel move.
+                pass
+                # # ~pico|1651005010> in GOMI
+                # # ~pico|1600500050> in GOMI
+                # value_without_prefix = value % 100000000
+                # x_left_right_pixel = (value_without_prefix) / 10000.0
+                # y_down_top_pixel = value_without_prefix % 10000
+                # print(f"value_without_prefix: {value_without_prefix}")
+                # print(f"x_left_right_pixel: {x_left_right_pixel}, y_down_top_pixel: {y_down_top_pixel}")
+                # if x_left_right_pixel>5000:
+                #     x_left_right_pixel=-(x_left_right_pixel-5000)
 
+                # if y_down_top_pixel>5000:
+                #     y_down_top_pixel=-(y_down_top_pixel-5000)
 
+                # print(f"DDD x_left_right_pixel: {x_left_right_pixel}, y_down_top_pixel: {y_down_top_pixel}")
+                # self.move_mouse_as_lrdt_of(int(x_left_right_pixel), int(y_down_top_pixel))
 
-# Move To Border Top	1272	2272
-# Move To Corner Top Right	1273	2273
-# Move To Border Right	1274	2274
-# Move To Corner Down Right	1275	2275
-# Move To Border Down	1276	2276
-# Move To Corner Down Left	1277	2277
-# Move To Border Left	1278	2278
-# Move To Corner Top Left	1279	2279
 
 
 
@@ -160,7 +193,6 @@ class IntegerActionToMouse:
 
     def release_left_button(self):
         self.mouse.release(Mouse.LEFT_BUTTON)
-
 
     def press_middle_button(self):
         self.mouse.press(Mouse.MIDDLE_BUTTON)
@@ -223,65 +255,74 @@ class IntegerActionToMouse:
     def release_all_mouse_buttons(self):
         self.mouse.release_all()
 
-    
 
-    def move_mouse_as_lrdt_of(self, left_to_right=0, down_top=0):
-        self.mouse.move(x=left_to_right, y=-down_top)
-
-
-
-    def mouse_move_left_up_of(self, left=0, up=0):
-        self.move_mouse_as_lrdt_of(left_to_right=-left, down_top=up)
-
-    def mouse_move_right_up_of(self, right=0, up=0):
-        self.move_mouse_as_lrdt_of(left_to_right=right, down_top=up)
-
-    def mouse_move_left_down_of(self, left=0, down=0):
-        self.move_mouse_as_lrdt_of(left_to_right=-left, down_top=-down)
-
-    def mouse_move_right_down_of(self, right=0, down=0):
-        self.move_mouse_as_lrdt_of(left_to_right=right, down_top=-down)
-
-    def mouse_move_up_of(self, up=0):
-        self.move_mouse_as_lrdt_of(down_top=up)
-
-    def mouse_move_down_of(self, down=0):
-        self.move_mouse_as_lrdt_of(down_top=-down)   
-
-    def mouse_move_left_of(self, left=0):
-        self.move_mouse_as_lrdt_of(left_to_right=-left)
-
-    def mouse_move_right_of(self, right=0):
-        self.move_mouse_as_lrdt_of(left_to_right=right)
-
-
+    def move_mouse_at_lrdt_percent_of(self, left_to_right=0.0, down_top=0.0):
+        self.mouse.move(int(32767.0*left_to_right), int(32767.0*(1.0-down_top)))
 
 
     def move_to_border_left(self):
-        self.move_mouse_as_lrdt_of(left_to_right=-10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=0, down_top=0.5)
 
     def move_to_border_right(self):
-        self.move_mouse_as_lrdt_of(left_to_right=10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=1, down_top=0.5)
 
     def move_to_border_top(self):
-        self.move_mouse_as_lrdt_of(down_top=10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=0.5, down_top=0)
 
     def move_to_border_down(self):
-        self.move_mouse_as_lrdt_of(down_top=-10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=0.5, down_top=1)
 
     def move_to_corner_top_left(self):
-        self.move_mouse_as_lrdt_of(left_to_right=-10000, down_top=10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=0, down_top=0)
 
     def move_to_corner_top_right(self):
-        self.move_mouse_as_lrdt_of(left_to_right=10000, down_top=10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=1, down_top=0)
 
     def move_to_corner_down_left(self):
-        self.move_mouse_as_lrdt_of(left_to_right=-10000, down_top=-10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=0, down_top=1)
 
     def move_to_corner_down_right(self):
-        self.move_mouse_as_lrdt_of(left_to_right=10000, down_top=-10000)
+        self.move_mouse_at_lrdt_percent_of(left_to_right=1, down_top=1)
 
     
 
 
 
+
+
+    # def mouse_move_left_up_of(self, left=0, up=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=-left, down_top=up)
+
+    # def mouse_move_right_up_of(self, right=0, up=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=right, down_top=up)
+
+    # def mouse_move_left_down_of(self, left=0, down=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=-left, down_top=-down)
+
+    # def mouse_move_right_down_of(self, right=0, down=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=right, down_top=-down)
+
+    # def mouse_move_up_of(self, up=0):
+    #     self.move_mouse_as_lrdt_of(down_top=up)
+
+    # def mouse_move_down_of(self, down=0):
+    #     self.move_mouse_as_lrdt_of(down_top=-down)   
+
+    # def mouse_move_left_of(self, left=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=-left)
+
+    # def mouse_move_right_of(self, right=0):
+    #     self.move_mouse_as_lrdt_of(left_to_right=right)
+
+
+    # def _move_mouse_as_piece_of(self, left_to_right=0, down_top=0):
+    #     # HID limitation is 127  so move by 100 distance pack
+    #     # NOTE FOR ME MOUSE ARE SUBJECT TO ACCELERATION
+    #     # MAY BE TRY TO CORRECT WITH THIS CODE
+    #     # https://circuitpython-absolute-mouse.readthedocs.io/en/latest/
+    #     while left_to_right != 0 or down_top != 0:
+    #         move_x = max(min(left_to_right, 100), -100)
+    #         move_y = max(min(down_top, 100), -100)
+    #         self.mouse.move(x=move_x, y=-move_y)
+    #         left_to_right -= move_x
+    #         down_top -= move_y
