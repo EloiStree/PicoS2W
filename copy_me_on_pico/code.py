@@ -17,6 +17,7 @@
 # #  */
 
 
+
 ## What is the goal of this code ?
 """
 I just want to provide a way to simulate keyboard, mouse and gamepad inputs programmatically.
@@ -37,6 +38,7 @@ Have fun learning!
 
 
 
+
 m_bool_use_debug_print = True
 
 print("I am here...")
@@ -45,6 +47,8 @@ print("I am here...")
 import sys
 import random
 import time
+
+from integer_action_to_ssd1306 import IntegerActionToSSD1306
 
 def is_it_still_working()->None:
     ## Check that the code is running by printing a hello world with basic information on the device.
@@ -65,7 +69,7 @@ def is_it_still_working()->None:
         pass
 
 ## UNCOMMENT WHEN YOU NEED TO CHECK IF YOU PICO STILL WORKS
-## is_it_still_working()
+# is_it_still_working()
 
 
 from check_code_integer_action_to_mouse import CheckCodeIntegerActionToMouse
@@ -129,6 +133,8 @@ from s2w_lib_connect_to_wifi import S2WLibConnectToWifi
 # Do you want to use the print log ?
 USE_PRINT_LOG = True
 
+print("🐿️🐿️")
+
 
 ################# WOW SETTING #################
 # Connect to Wi-Fi from setting.toml
@@ -147,41 +153,21 @@ check_mouse = CheckCodeIntegerActionToMouse(int_mouse)
 # check_mouse.check_click_of_the_mouse()
 
 
-displayio.release_displays()
-i2c = busio.I2C(board.GP1, board.GP0)
-display_bus = displayio.I2CDisplay(
-    i2c,
-    device_address=0x3C
-)
 
-display = adafruit_displayio_ssd1306.SSD1306(
-    display_bus,
-    width=128,
-    height=64
-)
-
-random_bitmap = displayio.Bitmap(128, 64, 2)
-random_palette = displayio.Palette(2)
-random_palette[0] = 0x000000
-random_palette[1] = 0xFFFFFF
-for y in range(64):
-    for x in range(128):
-        random_bitmap[x, y] = random.randint(0, 1)
-
-random_screen = displayio.Group()
-random_screen.append(displayio.TileGrid(
-    random_bitmap,
-    pixel_shader=random_palette
-))
-display.root_group = random_screen
-
-
-
-
-
-is_it_still_working()
+## Connect the Pico W with a SSD1306 display on pin GP5 (SCL) and GP4 (SDA)
+## use byte array of 1024 bytes if you refresh the screen from udp port 3615
+int_display = IntegerActionToSSD1306()
+int_display.set_screen_to_white()
+ipv4 = wifi.radio.ipv4_address
+mdns= wifi.radio.hostname
+text_as_welcome_screen = "Hello World ;)\n------------------------------\nIP: " + str(ipv4) + "\nMDNS: " + str(mdns) + "\nPORT: 3615"
+int_display.set_screen_to_text_with_line_return(text_as_welcome_screen)
+time.sleep(4)
+int_display.set_screen_from_text_image_of_border()
 
 print("🐿️")
+
+
 
 # 🐿️ If gamepad is not found in usb_hid.devices
 # Just reboot the device in boot mode and comeback.
@@ -201,6 +187,7 @@ int_keyboard = IntS2WToKeyboard()
 int_gamepad = IntS2WToGamepad()
 int_delayer = IntTimeDelayer()
 ntp_time_difference = GetNtpUtcTimestampTimeAndDifference()
+
 print("RTC ms:", ntp_time_difference.get_local_timestamp_in_milliseconds())
 print("NTP ms:", ntp_time_difference.get_ntp_utc_timestamp_in_milliseconds())
 print("Drift (ms):", ntp_time_difference.get_local_to_ntp_utc_difference_milliseconds())
@@ -245,21 +232,23 @@ if True: # Listen to incoming udp package on port 3615
     sock.settimeout(None)  # blocking mode
 
     print(f"Listening for UDP packets on port {UDP_PORT}...")
-    buffer = bytearray(1024)
+    buffer = bytearray(2048)
 
     while True:
         size, addr = sock.recvfrom_into(buffer)
         data = buffer[:size]
-        if bool_use_debug_print:
-            print("Received from", addr, ":", data)
+        #if m_bool_use_debug_print:
+        #    print("Received from", addr, "length:", len(data), ":", data)
 
         lenght_package = len(data)
         if lenght_package not in [4,8,12,16]:
-                if lenght_package % 16 == 0:
+                if lenght_package == 1024:
+                    int_display.set_screen_to_pixels_with_1024_bytes(data)
+                elif lenght_package % 16 == 0:
                     # This is a macro package with several IID
                     #splite the array in several package of 16 bytes
                     number_of_package = int(lenght_package / 16)
-                    if bool_use_debug_print:
+                    if m_bool_use_debug_print:
                         print("Macro package with number of package:", number_of_package)
                     for i in range(number_of_package):
                         data_part = data[i*16:(i+1)*16]
@@ -282,17 +271,17 @@ if True: # Listen to incoming udp package on port 3615
             int_index = 0
             if lenght_package == 4:
                 int_value = struct.unpack('<i', data)[0]
-                if bool_use_debug_print:
+                if m_bool_use_debug_print:
                     print("Unpacked Integer:", int_value)
                 relay_or_interpret_value(0,int_value,0)
             elif lenght_package == 8:
                 int_index, int_value = struct.unpack('<ii', data)
-                if bool_use_debug_print:
+                if m_bool_use_debug_print:
                     print("Unpacked Two Integers:", int_index, int_value)
                 relay_or_interpret_value(int_index,int_value,0)
             elif lenght_package == 12:
                 int_value, uint64 = struct.unpack('<iQ', data)
-                if bool_use_debug_print:
+                if m_bool_use_debug_print:
                     print("Unpacked Integer and Unsigned Long:", int_value, uint64)
                 relay_or_interpret_value(0,int_value,uint64)
             elif lenght_package == 16:
@@ -300,8 +289,12 @@ if True: # Listen to incoming udp package on port 3615
                 print("Unpacked Two Integers and One Unsigned Long:", int_index, int_value, uint64)
                 relay_or_interpret_value(int_index,int_value,uint64)
 
+            elif lenght_package == 1024:
+                int_display.set_screen_to_pixels_with_1024_bytes(data)
 
 
+
+is_it_still_working()
 
 
 # # if False: # EXPERIMENT WITH BLUETOOTH ELECTRONICS 🏳️
