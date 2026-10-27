@@ -7,9 +7,6 @@ Need: https://github.com/EloiStree/APIntCodeTournamentPythonRelay/blob/main/READ
 ------------
 
 
-I love [SSD1306](https://www.amazon.com.be/s?k=ssd1306) to debug.     
-But refresh with python take too much time instead of C/C++ Arduino.      
-A good alternative is to use a [eInk Display](https://www.waveshare.com/product/raspberry-pi/boards-kits/pico-epaper-2.13.htm)
 
 
 # Pico S2W
@@ -60,10 +57,11 @@ Previous Code draft code:
 
 
 
+# A Screen for Fun and Debugging
 
-
-
-
+I love using an [SSD1306 OLED display](https://www.amazon.com.be/s?k=ssd1306) for debugging.   
+However, refreshing the display with Python is much slower than using C/C++ on an Arduino.   
+A good alternative is an [eInk display](https://www.waveshare.com/product/raspberry-pi/boards-kits/pico-epaper-2.13.htm).  
 
 
 ----------------
