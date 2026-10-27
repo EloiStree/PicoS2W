@@ -25,22 +25,16 @@ The Pico 2W should be able to:
 The Pico 2W will act as a small sandbox capable of receiving, running, and returning results from user-submitted Python code. It will need to support:
 
 * **Update server target:**
-
   * Allow changing the mDNS address (e.g., `raspberrypi.local`)
 * **Update code logic:**
-
   * Replace the main script with the player’s submitted code
 * **Run logic code:**
-
   * Execute the player’s script safely
 * **UDP communication:**
-
   * Receive input via UDP (bytes or text)
   * Send input or state via UDP using a simple byte protocol (IID S2W)
 * **WebSocket communication:**
-
   * WebGL supports WebSockets, so the Pico 2W should be able to:
-
     * Send input over WebSockets using the IID S2W format
     * Receive game state information (bytes or text) over WebSockets
 
