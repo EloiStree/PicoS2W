@@ -6,6 +6,12 @@ Need: https://github.com/EloiStree/APIntCodeTournamentPythonRelay/blob/main/READ
 
 ------------
 
+
+I love [SSD1306](https://www.amazon.com.be/s?k=ssd1306) to debug.     
+But refresh with python take too much time instead of C/C++ Arduino.      
+A good alternative is to use a [eInk Display](https://www.waveshare.com/product/raspberry-pi/boards-kits/pico-epaper-2.13.htm)
+
+
 # Pico S2W
 
 A Pico 2W setup for use in a code tournament.
