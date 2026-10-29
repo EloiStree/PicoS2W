@@ -29,7 +29,7 @@ import adafruit_midi
 from adafruit_midi.note_on import NoteOn
 from adafruit_midi.note_off import NoteOff
 
-class IntS2WToMidi:
+class IntegerActionToMidiNote:
     def __init__(self):
         # prepare the midi output on circuit python
         self.midi = adafruit_midi.MIDI(
@@ -37,12 +37,14 @@ class IntS2WToMidi:
             out_channel=0
         )
     def int_to_midi(self, int_value):
+        # S2W DOC : https://github.com/EloiStree/S2W/blob/main/README.md
+        # GOMI TEST ( 1000> ~pico|1650> 1000> ~pico|2650> )x10
         bool_is_valide_1000 = (int_value>=1600 and int_value < 1600 + 128) or (int_value>=2600 and int_value < 2600 + 128)
         bool_is_valide_as_tag_13 = int(int_value / 100000000) % 100 == 13
 
         if not bool_is_valide_1000 and not bool_is_valide_as_tag_13:
             return  # Not a valid MIDI command
-
+        print("Received MIDI Integer:", int_value)
         if bool_is_valide_1000:
             bool_pression = int_value < 2000
             if bool_pression:            # Note On
