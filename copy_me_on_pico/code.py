@@ -126,6 +126,8 @@ from get_ntp_time import GetNtpUtcTimestampTimeAndDifference
 from s2w_lib_connect_to_wifi import S2WLibConnectToWifi
 
 
+from text_images_store_128x64 import TextImagesStore128x64
+
 
 
 # Do you want to use the print log ?
@@ -161,9 +163,13 @@ mdns= wifi.radio.hostname
 text_as_welcome_screen = "Hello World ;)\n------------------------------\nIP: " + str(ipv4) + "\nMDNS: " + str(mdns) + "\nPORT: 3615"
 int_display.set_screen_to_text_with_line_return(text_as_welcome_screen)
 time.sleep(4)
-int_display.set_screen_from_text_image_of_border()
+#int_display.set_screen_from_text_image_of_border()
+
+text_image = TextImagesStore128x64()
+int_display.set_screen_from_text_image(text_image.image_godot)
 
 print("🐿️")
+
 
 
 
@@ -185,35 +191,34 @@ int_mouse = IntegerActionToMouse() # Start behaving as Integer to Mouse converte
 int_keyboard = IntS2WToKeyboard()
 int_gamepad = IntS2WToGamepad()
 int_delayer = IntTimeDelayer()
-ntp_time_difference = GetNtpUtcTimestampTimeAndDifference()
 
-print("RTC ms:", ntp_time_difference.get_local_timestamp_in_milliseconds())
-print("NTP ms:", ntp_time_difference.get_ntp_utc_timestamp_in_milliseconds())
-print("Drift (ms):", ntp_time_difference.get_local_to_ntp_utc_difference_milliseconds())
+#ntp_time_difference = GetNtpUtcTimestampTimeAndDifference()
+#print("RTC ms:", ntp_time_difference.get_local_timestamp_in_milliseconds())
+#print("NTP ms:", ntp_time_difference.get_ntp_utc_timestamp_in_milliseconds())
+#print("Drift (ms):", ntp_time_difference.get_local_to_ntp_utc_difference_milliseconds())
+
 
 def relay_or_interpret_value(int_index:int,int_value:int, ulong_date_timestamp_ntp:int):
         # If tag is 17 or 18 then it is a gamepad xinput controller and need to be level shifted to a Arduino Leonardo
         # If tag is between 1300 and 1398 then it is a on off gamepad xinput controller
         # if it is not a xinput then deal with it.
         int_tag = int(int_value / 100000000 % 100)
-        if m_bool_use_debug_print:
-            print(f"Tag:{int_tag} Index:{int_index} Value:{int_value} Timestamp:{ulong_date_timestamp_ntp}")
-
-    
-        int_midi.int_to_midi(int_value)
+        #if m_bool_use_debug_print:
+        #    print(f"Tag:{int_tag} Index:{int_index} Value:{int_value} Timestamp:{ulong_date_timestamp_ntp}")    
         int_media_player.int_to_control(int_value)
-        int_keyboard.int_to_keypress(int_value)
-        int_mouse.int_to_mouse(int_value)
-        int_gamepad.int_to_gamepad(int_value)
-        if (int_value > 1300 and int_value < 1399) or (int_value > 2300 and int_value < 2399) or int_tag==18 or int_tag==17:
-            # It is a xinput gamepad commandxbox.send_integer(int_value)
-            if ulong_date_timestamp_ntp==0:
+        #int_keyboard.int_to_keypress(int_value)
+        #int_mouse.int_to_mouse(int_value)
+        #int_gamepad.int_to_gamepad(int_value)
+        #int_midi.int_to_midi(int_value)
+        # if (int_value > 1300 and int_value < 1399) or (int_value > 2300 and int_value < 2399) or int_tag==18 or int_tag==17:
+        #     # It is a xinput gamepad commandxbox.send_integer(int_value)
+        #     if ulong_date_timestamp_ntp==0:
 
-                if m_bool_use_debug_print:
-                    print (f"Send XInput Integer without timestamp: {int_value}")
-                if m_bool_use_debug_print:
-                    print (f"As bytes : {struct.pack('<i', int_value)}")
-                int_xbox.send_integer(int_value)
+        #         #if m_bool_use_debug_print:
+        #         #    print (f"Send XInput Integer without timestamp: {int_value}")
+        #         #if m_bool_use_debug_print:
+        #         #    print (f"As bytes : {struct.pack('<i', int_value)}")
+        #         int_xbox.send_integer(int_value)
 
 
 
@@ -231,81 +236,93 @@ if True: # Listen to incoming udp package on port 3615
     # Bind to all interfaces on port 5005
     UDP_PORT = 3615
     sock.bind(("0.0.0.0", UDP_PORT))
-    sock.settimeout(None)  # blocking mode
+    sock.setblocking(False)  # non-blocking mode; don't mix with settimeout
+    
 
     print(f"Listening for UDP packets on port {UDP_PORT}...")
     buffer = bytearray(2048)
 
     frame_count = 0
     while True:
-        time.sleep(0.001)  # small delay to prevent busy waiting
         frame_count += 1
-        print(f"Frame count: {frame_count}")
-        size, addr = sock.recvfrom_into(buffer)
-        data = buffer[:size]
-        if m_bool_use_debug_print:
-            print("Received from", addr, "length:", len(data), ":", data)
+        #print(f"Frame count: {frame_count}")
 
+        # Drain every packet currently queued in the socket buffer before
+        # sleeping again, so bursts of packets don't get missed.
+        time.sleep(0.001)  # small delay to prevent busy-waiting
+        while True:
+            try:
+                size, addr = sock.recvfrom_into(buffer)
+            except OSError:
+                size = 0
 
-        lenght_package = len(data)
-        if lenght_package == 1024:
-            int_display.set_screen_to_pixels_with_1024_bytes(data)
-        if lenght_package ==1:
-            print("Byte Macro.")
-            
-        elif lenght_package ==2:
-            print("Two Byte Macro.")
-            
-        elif lenght_package ==4:
-            # process a single integer value
-            int_value = struct.unpack('<i', data)[0]
-            if m_bool_use_debug_print:
-                print("Unpacked Integer:", int_value)
-            relay_or_interpret_value(0,int_value,0)
-            
-        elif lenght_package ==8:
-            # process a index value pair
-            int_index, int_value = struct.unpack('<ii', data)
-            if m_bool_use_debug_print:
-                print("Unpacked Two Integers:", int_index, int_value)
-            relay_or_interpret_value(int_index,int_value,0)
-            
-        elif lenght_package ==12:
-            # process and id 
-            int_value, uint64 = struct.unpack('<iQ', data)
-            if m_bool_use_debug_print:
-                print("Unpacked Integer and Unsigned Long:", int_value, uint64)
-            relay_or_interpret_value(0,int_value,uint64)
-            
-        elif lenght_package ==16:
-            # process a iid (index, value, date)
-            int_index, int_value, uint64 = struct.unpack('<iiQ', data)
-            print("Unpacked Two Integers and One Unsigned Long:", int_index, int_value, uint64)
-            relay_or_interpret_value(int_index,int_value,uint64)
+            if size <= 0:
+                break
+
+            data = buffer[:size]
+            # if m_bool_use_debug_print:
+            #     print("Received from", addr, "length:", len(data), ":", data)
+
+            lenght_package = len(data)
+            if lenght_package == 1024:
+                int_display.set_screen_to_pixels_with_1024_bytes(data)
+
+            if lenght_package ==1:
+                print("Byte Macro.")
+                
+            elif lenght_package ==2:
+                print("Two Byte Macro.")
+                
+            elif lenght_package ==4:
+                # process a single integer value
+                int_value = struct.unpack('<i', data)[0]
+                if m_bool_use_debug_print:
+                    print("Unpacked Integer:", int_value)
+                relay_or_interpret_value(0,int_value,0)
+                
+            elif lenght_package ==8:
+                # process a index value pair
+                int_index, int_value = struct.unpack('<ii', data)
+                if m_bool_use_debug_print:
+                    print("Unpacked Two Integers:", int_index, int_value)
+                relay_or_interpret_value(int_index,int_value,0)
+                
+            elif lenght_package ==12:
+                # process and id 
+                int_value, uint64 = struct.unpack('<iQ', data)
+                if m_bool_use_debug_print:
+                    print("Unpacked Integer and Unsigned Long:", int_value, uint64)
+                relay_or_interpret_value(0,int_value,uint64)
+                
+            elif lenght_package ==16:
+                # process a iid (index, value, date)
+                int_index, int_value, uint64 = struct.unpack('<iiQ', data)
+                #print("Unpacked Two Integers and One Unsigned Long:", int_index, int_value, uint64)
+                relay_or_interpret_value(int_index,int_value,uint64)
+
+                
+            elif lenght_package %16==0:
+                # Process a block of command as iid
+                # This is a macro package with several IID
+                #splite the array in several package of 16 bytes
+                number_of_package = int(lenght_package / 16)
+                if m_bool_use_debug_print:
+                    print("Macro package with number of package:", number_of_package)
+                for i in range(number_of_package):
+                    data_part = data[i*16:(i+1)*16]
+                    int_index, int_value, ulong_date = struct.unpack('<iiQ', data_part)
+                    relay_or_interpret_value(int_index,int_value,ulong_date)
+
+                    # I AM HERE
+                    # I NEED TO ADD A Index Value Date class to store in relay
+                    # if the time is under 1000 *60 *30 (30 minutes) = 1 800 000 ms
+                    # then it is a relative time from now and can be stack in the coming iid.
+                    # I need to create a delayer for iid with macro relative time
+                    # relay_or_interpret_value(int_index,int_value,ulong_date)
+            else:
+                print("Invalid package length:", lenght_package)
 
             
-        elif lenght_package %16==0:
-            # Process a block of command as iid
-            # This is a macro package with several IID
-            #splite the array in several package of 16 bytes
-            number_of_package = int(lenght_package / 16)
-            if m_bool_use_debug_print:
-                print("Macro package with number of package:", number_of_package)
-            for i in range(number_of_package):
-                data_part = data[i*16:(i+1)*16]
-                int_index, int_value, ulong_date = struct.unpack('<iiQ', data_part)
-                relay_or_interpret_value(int_index,int_value,ulong_date)
-
-                # I AM HERE
-                # I NEED TO ADD A Index Value Date class to store in relay
-                # if the time is under 1000 *60 *30 (30 minutes) = 1 800 000 ms
-                # then it is a relative time from now and can be stack in the coming iid.
-                # I need to create a delayer for iid with macro relative time
-                # relay_or_interpret_value(int_index,int_value,ulong_date)
-        else:
-            print("Invalid package length:", lenght_package)
-
-        
                                     
                   
 
